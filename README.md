@@ -10,88 +10,186 @@ This is a high-performance, command-line Contact Management System built in **C#
 ```mermaid
 classDiagram
     direction TB
-    
-    %% Core System
-    class IndexingSystemApp {
-        +RunAsync(databasePath: string) Task
+
+    class Program {
+        +Main(args: string[])$ Task
     }
 
-    %% Domain
+    class IndexingSystemApp {
+        +RunAsync(databasePath: string)$ Task
+    }
+
+    class AppConfig {
+        +GetConnectionString()$ string
+    }
+
     class Contact {
         +Id: int
         +Name: string
         +Email: string
         +Phone: string
         +CreatedAt: DateTime
+        +Contact()
+        +Contact(id: int, name: string, email: string, phone: string)
     }
 
-    %% Persistence
     class IContactRepository {
         <<interface>>
-        +LoadAllContactsAsync() Task
-        +SaveContactsAsync(contacts) Task
-    }
-    class JsonContactRepository {
-        +LoadAllContactsAsync() Task
-        +SaveContactsAsync(contacts) Task
+        +LoadAllContactsAsync() Task~IEnumerable~Contact~~
+        +SaveContactsAsync(contacts: IEnumerable~Contact~) Task
     }
 
-    %% In-Memory Indexing Engine
-    class ContactIndexManager {
-        -_contactsById: Dictionary
-        -_contactsByEmail: Dictionary
-        -_nameIndex: ISearchIndex
-        +AddContact()
-        +UpdateContact()
-        +RemoveContact()
-        +SearchByNamePrefix()
+    class JsonContactRepository {
+        -_filePath: string
+        -_jsonOptions: JsonSerializerOptions
+        +JsonContactRepository(filePath: string)
+        +LoadAllContactsAsync() Task~IEnumerable~Contact~~
+        +SaveContactsAsync(contacts: IEnumerable~Contact~) Task
     }
+
+    class IContactIndexManager {
+        <<interface>>
+        +GenerateNextId() int
+        +BuildIndexes(contacts: IEnumerable~Contact~) void
+        +AddContact(contact: Contact) void
+        +UpdateContact(updatedContact: Contact) bool
+        +RemoveContact(id: int) bool
+        +GetById(id: int) Contact?
+        +GetByEmail(email: string) Contact?
+        +EmailExists(email: string) bool
+        +GetAllContacts() IEnumerable~Contact~
+        +SearchByNamePrefix(prefix: string) IEnumerable~Contact~
+    }
+
+    class ContactIndexManager {
+        -_contactsById: Dictionary~int, Contact~
+        -_contactsByEmail: Dictionary~string, Contact~
+        -_nameIndex: ISearchIndex
+        -_random: Random
+        +GenerateNextId() int
+        +BuildIndexes(contacts: IEnumerable~Contact~) void
+        +AddContact(contact: Contact) void
+        +UpdateContact(updatedContact: Contact) bool
+        +RemoveContact(id: int) bool
+        +GetById(id: int) Contact?
+        +GetByEmail(email: string) Contact?
+        +EmailExists(email: string) bool
+        +GetAllContacts() IEnumerable~Contact~
+        +SearchByNamePrefix(prefix: string) IEnumerable~Contact~
+    }
+
     class ISearchIndex {
         <<interface>>
-        +Insert()
-        +SearchPrefix()
-        +Clear()
+        +Insert(key: string, contactId: int) void
+        +Remove(key: string, contactId: int) void
+        +SearchPrefix(prefix: string) IEnumerable~int~
+        +Clear() void
     }
+
     class NameTrie {
         -_root: NameTrieNode
+        +NameTrie()
+        +Insert(word: string, contactId: int) void
+        +Remove(word: string, contactId: int) void
+        +SearchPrefix(prefix: string) IEnumerable~int~
+        +Clear() void
+        -CollectIdsDfs(node: NameTrieNode, results: HashSet~int~) void
     }
 
-    %% Application Service
+    class NameTrieNode {
+        +Children: Dictionary~char, NameTrieNode~
+        +ContactIds: HashSet~int~
+        +IsLeaf: bool
+    }
+
     class ContactManagerService {
         -_contactRepository: IContactRepository
-        -_contactIndexManager: ContactIndexManager
-        +AddContact()
-        +FilterContacts(filter: IContactFilter)
+        -_contactIndexManager: IContactIndexManager
+        +ContactManagerService(contactRepository: IContactRepository, contactIndexManager: IContactIndexManager)
+        +InitializeAsync() Task
+        +GenerateNextId() int
+        +AddContact(contact: Contact) void
+        +EditContact(contact: Contact) bool
+        +RemoveContact(contactId: int) bool
+        +ViewContact(id: int) Contact?
+        +ViewContact(email: string) Contact?
+        +GetAllContacts() IEnumerable~Contact~
+        +SearchContacts(prefix: string) IEnumerable~Contact~
+        +FilterContacts(filter: IContactFilter) IEnumerable~Contact~
+        +SaveChangesAsync() Task
+        -ValidateContact(contact: Contact) void
     }
 
-    %% UI & Strategy
-    class ConsoleInterface {
-        +StartAsync() Task
-    }
     class IContactFilter {
         <<interface>>
         +Apply(contact: Contact) bool
     }
+
     class DateCreatedFilter {
+        -_targetDate: DateTime
+        -_comparisonType: DateComparisonType
+        +DateCreatedFilter(targetDate: DateTime, comparisonType: DateComparisonType)
         +Apply(contact: Contact) bool
     }
 
-    %% Relationships
+    class DateComparisonType {
+        <<enumeration>>
+        Before
+        After
+        OnExactDate
+    }
+
+    class ConsoleInterface {
+        -_service: ContactManagerService
+        +ConsoleInterface(service: ContactManagerService)
+        +StartAsync() Task
+        -ShowMenu() void
+        -AddContactUI() void
+        -EditContactUI() void
+        -DeleteContactUI() void
+        -ViewContactUI() void
+        -ListContactsUI() void
+        -SearchUI() void
+        -SearchByNameUI() void
+        -FilterUI() void
+        -FilterByDateUI() void
+        -SaveUIAsync() Task
+        -FindContactByIdOrEmail() Contact?
+        -DisplayContact(contact: Contact, index: int) void
+        -WaitForKey() void
+    }
+
+    %% Inheritance / Implementation
     JsonContactRepository ..|> IContactRepository
+    ContactIndexManager ..|> IContactIndexManager
     NameTrie ..|> ISearchIndex
     DateCreatedFilter ..|> IContactFilter
-    
+
+    %% Dependencies / Associations
+    Program ..> IndexingSystemApp
+    Program ..> AppConfig
     IndexingSystemApp ..> JsonContactRepository : creates
     IndexingSystemApp ..> ContactIndexManager : creates
     IndexingSystemApp ..> ContactManagerService : creates
-    
-    ContactManagerService --> IContactRepository
-    ContactManagerService --> ContactIndexManager
+    IndexingSystemApp ..> ConsoleInterface : creates
+
+    ContactManagerService --> IContactRepository : _contactRepository
+    ContactManagerService --> IContactIndexManager : _contactIndexManager
     ContactManagerService ..> IContactFilter : uses
-    
-    ContactIndexManager --> ISearchIndex
-    
-    ConsoleInterface --> ContactManagerService
+    ContactManagerService ..> Contact : validates & manages
+
+    ContactIndexManager --> ISearchIndex : _nameIndex
+    ContactIndexManager --> "*" Contact : _contactsById
+
+    NameTrie --> NameTrieNode : _root
+    NameTrieNode --> "*" NameTrieNode : Children
+
+    ConsoleInterface --> ContactManagerService : _service
+    ConsoleInterface ..> Contact : displays
+    ConsoleInterface ..> DateCreatedFilter : creates
+    ConsoleInterface ..> DateComparisonType : uses
+
+    DateCreatedFilter --> DateComparisonType : _comparisonType
 ```
 
 ---
