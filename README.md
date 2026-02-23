@@ -239,6 +239,6 @@ This project was built with a strict adherence to Clean Architecture and modern 
 
 To see the system in action and understand the backend design, please view the following demonstrations:
 
-* 🎥 **[System Overview & Demo (2 Minutes)](INSERT_YOUR_YOUTUBE_LINK_HERE)** *A quick walk-through of the CLI interface, demonstrating the instant Prefix Search and Strategy Pattern Date Filtering.*
+* 🎥 **[System Overview & Demo (5 Minutes)](https://www.youtube.com/watch?v=Q47Q7lZR34k)** *A quick walk-through of the CLI interface, demonstrating the instant Prefix Search and Strategy Pattern Date Filtering.*
 
-* 🎥 **[Technical Breakdown & Architecture (5 Minutes)](INSERT_YOUR_YOUTUBE_LINK_HERE)** *A deep dive into the code. I explain the performance bottlenecks of legacy indexing, how the custom Prefix Trie was built, and how state is safely synchronized across the in-memory indexes.*
+* 🎥 **[Technical Details & Architecture (13 Minutes)](https://www.youtube.com/watch?v=7xq3iNceW-0)** *A deep dive into the code. I explain the performance bottlenecks of legacy indexing, how the custom Prefix Trie was built, and how state is safely synchronized across the in-memory indexes.*
