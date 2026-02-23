@@ -221,7 +221,7 @@ This project was built with a strict adherence to Clean Architecture and modern 
 ### Installation & Execution
 1. Clone the repository to your local machine:
    ```bash
-   git clone <YOUR_GITHUB_REPO_URL>
+   git clone https://github.com/Adam-Gamil/IndexingSystem.git
    ```
 2. Navigate into the project directory:
    ```bash
